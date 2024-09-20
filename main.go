@@ -17,9 +17,9 @@ var db *gorm.DB
 type User struct {
 	ID    uint   `gorm:"primaryKey"`
 	Email string `gorm:"unique;not null"`
-	QAs   []QAs
+	QAs   []QA
 }
-type QAs struct {
+type QA struct {
 	ID       uint   `gorm:"primaryKey"`
 	Question string `gorm:"not null"`
 	Answer   string `gorm:"not null"`
@@ -45,7 +45,7 @@ func initDB() {
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
-	db.AutoMigrate(&User{}, &QAs{})
+	db.AutoMigrate(&User{}, &QA{})
 }
 
 func main() {
@@ -61,7 +61,7 @@ func main() {
 }
 
 func getItems(c echo.Context) error {
-	var items []QAs
+	var items []QA
 	if err := db.Preload("User").Find(&items).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to fetch items"})
 	}
@@ -69,7 +69,7 @@ func getItems(c echo.Context) error {
 }
 
 func createItem(c echo.Context) error {
-	item := new(QAs)
+	item := new(QA)
 	if err := c.Bind(item); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
 	}
