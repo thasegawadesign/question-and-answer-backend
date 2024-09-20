@@ -15,15 +15,15 @@ import (
 var db *gorm.DB
 
 type User struct {
-	ID    uint   `gorm:"primaryKey"`
-	Email string `gorm:"unique;not null"`
-	QAs   []QA
+	ID    uint   `json:"id" gorm:"primaryKey"`
+	Email string `json:"email" gorm:"unique;not null"`
 }
 type QA struct {
-	ID       uint   `gorm:"primaryKey"`
-	Question string `gorm:"not null"`
-	Answer   string `gorm:"not null"`
-	UserID   uint
+	ID        uint   `json:"id" gorm:"primaryKey"`
+	Question  string `json:"question" gorm:"not null"`
+	Answer    string `json:"answer" gorm:"not null"`
+	User      User   `json:"user" gorm:"foreignKey:UserEmail;references:Email;constraint:OnDelete:CASCADE"`
+	UserEmail string `json:"user_email" gorm:"not null"`
 }
 
 func loadEnv() {
@@ -55,6 +55,7 @@ func main() {
 	e := echo.New()
 
 	e.GET("/api/items", getItems)
+	e.POST("/api/user", createUser)
 	e.POST("/api/items", createItem)
 
 	e.Logger.Fatal(e.Start(":8080"))
@@ -78,4 +79,17 @@ func createItem(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create item"})
 	}
 	return c.JSON(http.StatusOK, item)
+}
+
+func createUser(c echo.Context) error {
+	user := new(User)
+
+	if err := c.Bind(user); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid request"})
+	}
+	if result := db.Create(&user); result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to create user"})
+	}
+
+	return c.JSON(http.StatusCreated, user)
 }
