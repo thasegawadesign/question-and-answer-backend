@@ -26,6 +26,13 @@ type QAs struct {
 	UserID   uint
 }
 
+func loadEnv() {
+	err := godotenv.Load(".env")
+	if err != nil {
+		fmt.Printf("Failed to load: %v", err)
+	}
+}
+
 func initDB() {
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
 		os.Getenv("POSTGRES_HOST"),
@@ -51,13 +58,6 @@ func main() {
 	e.POST("/api/items", createItem)
 
 	e.Logger.Fatal(e.Start(":8080"))
-}
-
-func loadEnv() {
-	err := godotenv.Load(".env")
-	if err != nil {
-		fmt.Printf("読み込み出来ませんでした: %v", err)
-	}
 }
 
 func getItems(c echo.Context) error {
