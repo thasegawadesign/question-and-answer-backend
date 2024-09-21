@@ -58,6 +58,7 @@ func main() {
 	e.GET("/api/items", getItemsByEmail)
 	e.POST("/api/users", createUser)
 	e.POST("/api/items", createItem)
+	e.PUT("/api/items", updateItem)
 	e.DELETE("/api/items", deleteItemById)
 
 	e.Logger.Fatal(e.Start(":8080"))
@@ -93,14 +94,11 @@ func createItem(c echo.Context) error {
 
 func deleteItemById(c echo.Context) error {
 	var request struct {
-		ID    string `json:"id"`
+		ID    uint   `json:"id"`
 		Email string `json:"email"`
 	}
 	if err := c.Bind(&request); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
-	}
-	if request.ID == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "ID is required"})
 	}
 	if request.Email == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
@@ -109,6 +107,31 @@ func deleteItemById(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to delete item"})
 	}
 	return c.JSON(http.StatusOK, map[string]string{"message": "Item deleted successfully"})
+}
+
+func updateItem(c echo.Context) error {
+	var request struct {
+		ID       uint   `json:"id"`
+		Email    string `json:"email"`
+		Question string `json:"question"`
+		Answer   string `json:"answer"`
+	}
+	if err := c.Bind(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+	}
+	if request.Email == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
+	}
+	var item QA
+	if err := db.Where("id = ? AND user_email = ?", request.ID, request.Email).First(&item).Error; err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "Item not found"})
+	}
+	item.Question = request.Question
+	item.Answer = request.Answer
+	if err := db.Save(&item).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to update item"})
+	}
+	return c.JSON(http.StatusOK, item)
 }
 
 func createUser(c echo.Context) error {
