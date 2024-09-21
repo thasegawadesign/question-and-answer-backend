@@ -15,15 +15,16 @@ import (
 var db *gorm.DB
 
 type User struct {
-	ID    uint   `json:"id" gorm:"primaryKey"`
-	Email string `json:"email" gorm:"unique;not null"`
+	ID       uint   `json:"id" gorm:"primaryKey"`
+	Email    string `json:"email" gorm:"unique;not null"`
+	Provider string `json:"provider"`
 }
 type QA struct {
 	ID        uint   `json:"id" gorm:"primaryKey"`
-	Question  string `json:"question" gorm:"not null"`
-	Answer    string `json:"answer" gorm:"not null"`
+	Question  string `json:"question"`
+	Answer    string `json:"answer"`
 	User      User   `json:"user" gorm:"foreignKey:UserEmail;references:Email;constraint:OnDelete:CASCADE"`
-	UserEmail string `json:"user_email" gorm:"not null"`
+	UserEmail string `json:"user_email"`
 }
 
 func loadEnv() {
@@ -74,7 +75,6 @@ func createItem(c echo.Context) error {
 	if err := c.Bind(item); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
 	}
-
 	if err := db.Create(&item).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create item"})
 	}
