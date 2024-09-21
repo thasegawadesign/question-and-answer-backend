@@ -15,15 +15,23 @@ import (
 var db *gorm.DB
 
 type User struct {
-	ID    uint   `gorm:"primaryKey"`
-	Email string `gorm:"unique;not null"`
-	QAs   []QAs
+	ID       uint   `json:"id" gorm:"primaryKey"`
+	Email    string `json:"email" gorm:"unique;not null"`
+	Provider string `json:"provider"`
 }
-type QAs struct {
-	ID       uint   `gorm:"primaryKey"`
-	Question string `gorm:"not null"`
-	Answer   string `gorm:"not null"`
-	UserID   uint
+type QA struct {
+	ID        uint   `json:"id" gorm:"primaryKey"`
+	Question  string `json:"question"`
+	Answer    string `json:"answer"`
+	User      User   `json:"user" gorm:"foreignKey:UserEmail;references:Email;constraint:OnDelete:CASCADE"`
+	UserEmail string `json:"user_email"`
+}
+
+func loadEnv() {
+	err := godotenv.Load(".env")
+	if err != nil {
+		fmt.Printf("Failed to load: %v", err)
+	}
 }
 
 func initDB() {
@@ -38,7 +46,7 @@ func initDB() {
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
-	db.AutoMigrate(&User{}, &QAs{})
+	db.AutoMigrate(&User{}, &QA{})
 }
 
 func main() {
@@ -48,20 +56,14 @@ func main() {
 	e := echo.New()
 
 	e.GET("/api/items", getItems)
+	e.POST("/api/user", createUser)
 	e.POST("/api/items", createItem)
 
 	e.Logger.Fatal(e.Start(":8080"))
 }
 
-func loadEnv() {
-	err := godotenv.Load(".env")
-	if err != nil {
-		fmt.Printf("読み込み出来ませんでした: %v", err)
-	}
-}
-
 func getItems(c echo.Context) error {
-	var items []QAs
+	var items []QA
 	if err := db.Preload("User").Find(&items).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to fetch items"})
 	}
@@ -69,13 +71,25 @@ func getItems(c echo.Context) error {
 }
 
 func createItem(c echo.Context) error {
-	item := new(QAs)
+	item := new(QA)
 	if err := c.Bind(item); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
 	}
-
 	if err := db.Create(&item).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create item"})
 	}
 	return c.JSON(http.StatusOK, item)
+}
+
+func createUser(c echo.Context) error {
+	user := new(User)
+
+	if err := c.Bind(user); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid request"})
+	}
+	if result := db.Create(&user); result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to create user"})
+	}
+
+	return c.JSON(http.StatusCreated, user)
 }
