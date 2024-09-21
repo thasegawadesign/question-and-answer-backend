@@ -24,7 +24,7 @@ type QA struct {
 	Question  string `json:"question"`
 	Answer    string `json:"answer"`
 	User      User   `json:"user" gorm:"foreignKey:UserEmail;references:Email;constraint:OnDelete:CASCADE"`
-	UserEmail string `json:"user_email"`
+	UserEmail string `json:"user_email" gorm:"not null"`
 }
 
 func loadEnv() {
@@ -55,17 +55,26 @@ func main() {
 
 	e := echo.New()
 
-	e.GET("/api/items", getItems)
-	e.POST("/api/user", createUser)
+	e.GET("/api/items", getItemsByEmail)
+	e.POST("/api/users", createUser)
 	e.POST("/api/items", createItem)
 
 	e.Logger.Fatal(e.Start(":8080"))
 }
 
-func getItems(c echo.Context) error {
+func getItemsByEmail(c echo.Context) error {
+	var request struct {
+		Email string `json:"email"`
+	}
+	if err := c.Bind(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+	}
+	if request.Email == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
+	}
 	var items []QA
-	if err := db.Preload("User").Find(&items).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to fetch items"})
+	if err := db.Preload("User").Where("user_email = ?", request.Email).Find(&items).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to fetch items for the specified user"})
 	}
 	return c.JSON(http.StatusOK, items)
 }
