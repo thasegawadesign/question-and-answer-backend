@@ -66,17 +66,12 @@ func main() {
 }
 
 func getItemsByEmail(c echo.Context) error {
-	var request struct {
-		Email string `json:"email"`
-	}
-	if err := c.Bind(&request); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
-	}
-	if request.Email == "" {
+	email := c.QueryParam("email")
+	if email == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
 	}
 	var items []QA
-	if err := db.Preload("User").Where("user_email = ?", request.Email).Find(&items).Error; err != nil {
+	if err := db.Preload("User").Where("user_email = ?", email).Find(&items).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to fetch items for the specified user"})
 	}
 	return c.JSON(http.StatusOK, items)
