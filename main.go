@@ -55,9 +55,9 @@ func main() {
 
 	e := echo.New()
 
-	e.GET("/api/user", getUserByEmail)
+	e.GET("/api/users", getUserByEmail)
 	e.GET("/api/items", getItemsByEmail)
-	e.POST("/api/user", createUser)
+	e.POST("/api/users", createUser)
 	e.POST("/api/items", createItem)
 	e.PUT("/api/items", updateItem)
 	e.DELETE("/api/items", deleteItemById)
@@ -66,17 +66,12 @@ func main() {
 }
 
 func getItemsByEmail(c echo.Context) error {
-	var request struct {
-		Email string `json:"email"`
-	}
-	if err := c.Bind(&request); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
-	}
-	if request.Email == "" {
+	email := c.QueryParam("email")
+	if email == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
 	}
 	var items []QA
-	if err := db.Preload("User").Where("user_email = ?", request.Email).Find(&items).Error; err != nil {
+	if err := db.Preload("User").Where("user_email = ?", email).Find(&items).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to fetch items for the specified user"})
 	}
 	return c.JSON(http.StatusOK, items)
@@ -136,17 +131,9 @@ func updateItem(c echo.Context) error {
 }
 
 func getUserByEmail(c echo.Context) error {
-	var request struct {
-		Email string `json:"email"`
-	}
-	if err := c.Bind(&request); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
-	}
-	if request.Email == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
-	}
+	email := c.QueryParam("email")
 	var user User
-	result := db.Where("email = ?", request.Email).First(&user)
+	result := db.Where("email = ?", email).First(&user)
 	if result.Error != nil {
 		return c.JSON(http.StatusNotFound, echo.Map{"message": "User not found"})
 	}
