@@ -8,6 +8,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -54,6 +55,11 @@ func main() {
 	initDB()
 
 	e := echo.New()
+
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"http://localhost:3000", "https://question-and-answer-alpha.vercel.app"},
+		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
+	}))
 
 	e.GET("/api/users", getUserByEmail)
 	e.GET("/api/items", getItemsByEmail)
