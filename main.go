@@ -75,6 +75,7 @@ func main() {
 		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
 	}))
 
+	e.GET("/api/csrf-token", getCsrfToken)
 	e.GET("/api/users", getUserByEmail)
 	e.GET("/api/items", getItemsByEmail)
 	e.POST("/api/users", createUser)
@@ -83,6 +84,13 @@ func main() {
 	e.DELETE("/api/items", deleteItemById)
 
 	e.Logger.Fatal(e.Start(":8080"))
+}
+
+func getCsrfToken(c echo.Context) error {
+	csrfToken := c.Get("csrf").(string)
+	return c.JSON(http.StatusOK, map[string]string{
+		"csrf_token": csrfToken,
+	})
 }
 
 func getItemsByEmail(c echo.Context) error {
