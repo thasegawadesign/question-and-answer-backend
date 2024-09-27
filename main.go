@@ -74,6 +74,7 @@ func main() {
 		CookieHTTPOnly: true,
 	}))
 
+	e.GET("/", getCsrfToken)
 	e.GET("/api/csrf-token", getCsrfToken)
 	e.GET("/api/users", getUserByEmail)
 	e.GET("/api/items", getItemsByEmail)
