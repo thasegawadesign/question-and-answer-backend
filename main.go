@@ -63,8 +63,9 @@ func main() {
 	}
 
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{"http://localhost:3000", "https://question-and-answer.gojiyuuniotorikudasai.com", "https://question-and-answer-alpha.vercel.app"},
-		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
+		AllowOrigins:     []string{"http://localhost:3000", "https://question-and-answer.gojiyuuniotorikudasai.com", "https://question-and-answer-alpha.vercel.app"},
+		AllowMethods:     []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
+		AllowCredentials: true,
 	}))
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
 		TokenLookup:    "header:X-CSRF-Token",
