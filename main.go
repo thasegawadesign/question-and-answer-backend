@@ -56,27 +56,12 @@ func main() {
 
 	e := echo.New()
 
-	goEnv := os.Getenv("GO_ENV")
-	cookieSecure := false
-	if goEnv == "production" {
-		cookieSecure = true
-	}
-
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins:     []string{"http://localhost:3000", "https://question-and-answer.gojiyuuniotorikudasai.com", "https://question-and-answer-alpha.vercel.app"},
 		AllowMethods:     []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
 		AllowCredentials: true,
 	}))
-	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
-		TokenLookup:    "header:X-CSRF-Token",
-		CookieName:     "_csrf",
-		CookiePath:     "/",
-		CookieSecure:   cookieSecure,
-		CookieHTTPOnly: true,
-	}))
 
-	e.GET("/", getCsrfToken)
-	e.GET("/api/csrf-token", getCsrfToken)
 	e.GET("/api/users", getUserByEmail)
 	e.GET("/api/items", getItemsByEmail)
 	e.POST("/api/users", createUser)
@@ -85,13 +70,6 @@ func main() {
 	e.DELETE("/api/items", deleteItemById)
 
 	e.Logger.Fatal(e.Start(":8080"))
-}
-
-func getCsrfToken(c echo.Context) error {
-	csrfToken := c.Get("csrf").(string)
-	return c.JSON(http.StatusOK, map[string]string{
-		"csrf_token": csrfToken,
-	})
 }
 
 func getItemsByEmail(c echo.Context) error {
