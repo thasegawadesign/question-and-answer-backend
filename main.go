@@ -61,6 +61,14 @@ func main() {
 		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
 	}))
 
+	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
+		TokenLookup:    "header:X-CSRF-Token",
+		CookieName:     "_csrf",
+		CookiePath:     "/",
+		CookieSecure:   false,
+		CookieHTTPOnly: true,
+	}))
+
 	e.GET("/api/users", getUserByEmail)
 	e.GET("/api/items", getItemsByEmail)
 	e.POST("/api/users", createUser)
