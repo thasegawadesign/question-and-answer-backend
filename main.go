@@ -62,17 +62,16 @@ func main() {
 		cookieSecure = true
 	}
 
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"http://localhost:3000", "https://question-and-answer.gojiyuuniotorikudasai.com", "https://question-and-answer-alpha.vercel.app"},
+		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
+	}))
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
 		TokenLookup:    "header:X-CSRF-Token",
 		CookieName:     "_csrf",
 		CookiePath:     "/",
 		CookieSecure:   cookieSecure,
 		CookieHTTPOnly: true,
-	}))
-
-	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{"http://localhost:3000", "https://question-and-answer.gojiyuuniotorikudasai.com", "https://question-and-answer-alpha.vercel.app"},
-		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
 	}))
 
 	e.GET("/api/csrf-token", getCsrfToken)
