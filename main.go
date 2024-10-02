@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 
+	"question-and-answer-backend/models"
+
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -14,19 +16,6 @@ import (
 )
 
 var db *gorm.DB
-
-type User struct {
-	ID       uint   `json:"id" gorm:"primaryKey"`
-	Email    string `json:"email" gorm:"unique;not null"`
-	Provider string `json:"provider"`
-}
-type QA struct {
-	ID        uint   `json:"id" gorm:"primaryKey"`
-	Question  string `json:"question"`
-	Answer    string `json:"answer"`
-	User      User   `json:"user" gorm:"foreignKey:UserEmail;references:Email;constraint:OnDelete:CASCADE"`
-	UserEmail string `json:"user_email" gorm:"not null"`
-}
 
 func loadEnv() {
 	err := godotenv.Load(".env")
@@ -47,7 +36,7 @@ func initDB() {
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
-	db.AutoMigrate(&User{}, &QA{})
+	db.AutoMigrate(&models.User{}, &models.Item{})
 }
 
 func main() {
@@ -72,8 +61,50 @@ func main() {
 	e.Logger.Fatal(e.Start(":8080"))
 }
 
+func registerUser(c echo.Context) error {
+	user := new(models.User)
+
+	if err := c.Bind(user); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid request"})
+	}
+	if result := db.Create(&user); result.Error != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to create user"})
+	}
+
+	return c.JSON(http.StatusCreated, user)
+}
+
+func getUserByEmail(c echo.Context) error {
+	var request struct {
+		Email string `json:"email"`
+	}
+	if err := c.Bind(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+	}
+	if request.Email == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
+	}
+	var user models.User
+	result := db.Where("email = ?", request.Email).First(&user)
+	if result.Error != nil {
+		return c.JSON(http.StatusNotFound, echo.Map{"message": "User not found"})
+	}
+	return c.JSON(http.StatusOK, user)
+}
+
+func addItem(c echo.Context) error {
+	item := new(models.Item)
+	if err := c.Bind(item); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
+	}
+	if err := db.Create(&item).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create item"})
+	}
+	return c.JSON(http.StatusOK, item)
+}
+
 func getItemsByEmail(c echo.Context) error {
-	var items []QA
+	var items []models.Item
 	var request struct {
 		Email string `json:"email"`
 	}
@@ -89,13 +120,27 @@ func getItemsByEmail(c echo.Context) error {
 	return c.JSON(http.StatusOK, items)
 }
 
-func addItem(c echo.Context) error {
-	item := new(QA)
-	if err := c.Bind(item); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
+func updateItem(c echo.Context) error {
+	var request struct {
+		ID       uint   `json:"id"`
+		Email    string `json:"email"`
+		Question string `json:"question"`
+		Answer   string `json:"answer"`
 	}
-	if err := db.Create(&item).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create item"})
+	if err := c.Bind(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+	}
+	if request.Email == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
+	}
+	var item models.Item
+	if err := db.Where("id = ? AND user_email = ?", request.ID, request.Email).First(&item).Error; err != nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "Item not found"})
+	}
+	item.Question = request.Question
+	item.Answer = request.Answer
+	if err := db.Save(&item).Error; err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to update item"})
 	}
 	return c.JSON(http.StatusOK, item)
 }
@@ -111,64 +156,8 @@ func deleteItemById(c echo.Context) error {
 	if request.Email == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
 	}
-	if err := db.Where("id = ? AND user_email = ?", request.ID, request.Email).Delete(&QA{}).Error; err != nil {
+	if err := db.Where("id = ? AND user_email = ?", request.ID, request.Email).Delete(&models.Item{}).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to delete item"})
 	}
 	return c.JSON(http.StatusOK, map[string]string{"message": "Item deleted successfully"})
-}
-
-func updateItem(c echo.Context) error {
-	var request struct {
-		ID       uint   `json:"id"`
-		Email    string `json:"email"`
-		Question string `json:"question"`
-		Answer   string `json:"answer"`
-	}
-	if err := c.Bind(&request); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
-	}
-	if request.Email == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
-	}
-	var item QA
-	if err := db.Where("id = ? AND user_email = ?", request.ID, request.Email).First(&item).Error; err != nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": "Item not found"})
-	}
-	item.Question = request.Question
-	item.Answer = request.Answer
-	if err := db.Save(&item).Error; err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to update item"})
-	}
-	return c.JSON(http.StatusOK, item)
-}
-
-func getUserByEmail(c echo.Context) error {
-	var request struct {
-		Email string `json:"email"`
-	}
-	if err := c.Bind(&request); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
-	}
-	if request.Email == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
-	}
-	var user User
-	result := db.Where("email = ?", request.Email).First(&user)
-	if result.Error != nil {
-		return c.JSON(http.StatusNotFound, echo.Map{"message": "User not found"})
-	}
-	return c.JSON(http.StatusOK, user)
-}
-
-func registerUser(c echo.Context) error {
-	user := new(User)
-
-	if err := c.Bind(user); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid request"})
-	}
-	if result := db.Create(&user); result.Error != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to create user"})
-	}
-
-	return c.JSON(http.StatusCreated, user)
 }
