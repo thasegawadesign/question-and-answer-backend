@@ -62,29 +62,34 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	e.GET("/api/users", getUserByEmail)
-	e.GET("/api/items", getItemsByEmail)
-	e.POST("/api/users", createUser)
-	e.POST("/api/items", createItem)
-	e.PUT("/api/items", updateItem)
-	e.DELETE("/api/items", deleteItemById)
+	e.POST("/api/users/query-by-email", getUserByEmail)
+	e.POST("/api/items/query-by-email", getItemsByEmail)
+	e.POST("/api/users/register", registerUser)
+	e.POST("/api/items/add", addItem)
+	e.PUT("/api/items/update", updateItem)
+	e.DELETE("/api/items/delete", deleteItemById)
 
 	e.Logger.Fatal(e.Start(":8080"))
 }
 
 func getItemsByEmail(c echo.Context) error {
-	email := c.QueryParam("email")
-	if email == "" {
+	var items []QA
+	var request struct {
+		Email string `json:"email"`
+	}
+	if err := c.Bind(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+	}
+	if request.Email == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
 	}
-	var items []QA
-	if err := db.Preload("User").Where("user_email = ?", email).Find(&items).Error; err != nil {
+	if err := db.Preload("User").Where("user_email = ?", request.Email).Find(&items).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to fetch items for the specified user"})
 	}
 	return c.JSON(http.StatusOK, items)
 }
 
-func createItem(c echo.Context) error {
+func addItem(c echo.Context) error {
 	item := new(QA)
 	if err := c.Bind(item); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
@@ -138,16 +143,24 @@ func updateItem(c echo.Context) error {
 }
 
 func getUserByEmail(c echo.Context) error {
-	email := c.QueryParam("email")
+	var request struct {
+		Email string `json:"email"`
+	}
+	if err := c.Bind(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+	}
+	if request.Email == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
+	}
 	var user User
-	result := db.Where("email = ?", email).First(&user)
+	result := db.Where("email = ?", request.Email).First(&user)
 	if result.Error != nil {
 		return c.JSON(http.StatusNotFound, echo.Map{"message": "User not found"})
 	}
 	return c.JSON(http.StatusOK, user)
 }
 
-func createUser(c echo.Context) error {
+func registerUser(c echo.Context) error {
 	user := new(User)
 
 	if err := c.Bind(user); err != nil {
