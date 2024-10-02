@@ -63,7 +63,7 @@ func main() {
 	}))
 
 	e.POST("/api/users/query-by-email", getUserByEmail)
-	e.GET("/api/items", getItemsByEmail)
+	e.POST("/api/items/query-by-email", getItemsByEmail)
 	e.POST("/api/users", createUser)
 	e.POST("/api/items", createItem)
 	e.PUT("/api/items", updateItem)
@@ -73,12 +73,17 @@ func main() {
 }
 
 func getItemsByEmail(c echo.Context) error {
-	email := c.QueryParam("email")
-	if email == "" {
+	var items []QA
+	var request struct {
+		Email string `json:"email"`
+	}
+	if err := c.Bind(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+	}
+	if request.Email == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
 	}
-	var items []QA
-	if err := db.Preload("User").Where("user_email = ?", email).Find(&items).Error; err != nil {
+	if err := db.Preload("User").Where("user_email = ?", request.Email).Find(&items).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to fetch items for the specified user"})
 	}
 	return c.JSON(http.StatusOK, items)
