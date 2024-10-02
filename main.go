@@ -62,10 +62,10 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	e.POST("/api/users/query-by-email", getUserByEmail)
-	e.POST("/api/items/query-by-email", getItemsByEmail)
 	e.POST("/api/users/register", registerUser)
+	e.POST("/api/users/query-by-email", getUserByEmail)
 	e.POST("/api/items/add", addItem)
+	e.POST("/api/items/query-by-email", getItemsByEmail)
 	e.PUT("/api/items/update", updateItem)
 	e.DELETE("/api/items/delete", deleteItemById)
 
