@@ -62,7 +62,7 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	e.GET("/api/users", getUserByEmail)
+	e.POST("/api/users/query-by-email", getUserByEmail)
 	e.GET("/api/items", getItemsByEmail)
 	e.POST("/api/users", createUser)
 	e.POST("/api/items", createItem)
@@ -138,9 +138,17 @@ func updateItem(c echo.Context) error {
 }
 
 func getUserByEmail(c echo.Context) error {
-	email := c.QueryParam("email")
+	var request struct {
+		Email string `json:"email"`
+	}
+	if err := c.Bind(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
+	}
+	if request.Email == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
+	}
 	var user User
-	result := db.Where("email = ?", email).First(&user)
+	result := db.Where("email = ?", request.Email).First(&user)
 	if result.Error != nil {
 		return c.JSON(http.StatusNotFound, echo.Map{"message": "User not found"})
 	}
