@@ -64,7 +64,7 @@ func main() {
 
 	e.POST("/api/users/query-by-email", getUserByEmail)
 	e.POST("/api/items/query-by-email", getItemsByEmail)
-	e.POST("/api/users", createUser)
+	e.POST("/api/users/register", registerUser)
 	e.POST("/api/items", createItem)
 	e.PUT("/api/items", updateItem)
 	e.DELETE("/api/items", deleteItemById)
@@ -160,7 +160,7 @@ func getUserByEmail(c echo.Context) error {
 	return c.JSON(http.StatusOK, user)
 }
 
-func createUser(c echo.Context) error {
+func registerUser(c echo.Context) error {
 	user := new(User)
 
 	if err := c.Bind(user); err != nil {
