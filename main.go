@@ -65,9 +65,9 @@ func main() {
 	e.POST("/api/users/query-by-email", getUserByEmail)
 	e.POST("/api/items/query-by-email", getItemsByEmail)
 	e.POST("/api/users/register", registerUser)
-	e.POST("/api/items", createItem)
-	e.PUT("/api/items", updateItem)
-	e.DELETE("/api/items", deleteItemById)
+	e.POST("/api/items/add", addItem)
+	e.PUT("/api/items/update", updateItem)
+	e.DELETE("/api/items/delete", deleteItemById)
 
 	e.Logger.Fatal(e.Start(":8080"))
 }
@@ -89,7 +89,7 @@ func getItemsByEmail(c echo.Context) error {
 	return c.JSON(http.StatusOK, items)
 }
 
-func createItem(c echo.Context) error {
+func addItem(c echo.Context) error {
 	item := new(QA)
 	if err := c.Bind(item); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
