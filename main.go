@@ -114,7 +114,7 @@ func addItem(c echo.Context) error {
 	if err := c.Bind(item); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
 	}
-	if err := c.Validate(&item); err != nil {
+	if err := c.Validate(item); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	if err := db.Create(&item).Error; err != nil {
