@@ -1,9 +1,9 @@
 package models
 
 type Item struct {
-	ID        uint   `json:"id" gorm:"primaryKey"`
-	Question  string `json:"question"`
-	Answer    string `json:"answer"`
-	User      User   `json:"user" gorm:"foreignKey:UserEmail;references:Email;constraint:OnDelete:CASCADE"`
-	UserEmail string `json:"user_email" gorm:"not null"`
+	ID       uint   `json:"id" gorm:"primaryKey"`
+	Question string `json:"question"`
+	Answer   string `json:"answer"`
+	User     User   `json:"user" gorm:"foreignKey:Email;references:Email;constraint:OnDelete:CASCADE"`
+	Email    string `json:"email" gorm:"not null"`
 }
