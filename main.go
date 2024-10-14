@@ -8,12 +8,21 @@ import (
 
 	"question-and-answer-backend/models"
 
+	"github.com/go-playground/validator"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
+
+type CustomValidator struct {
+	validator *validator.Validate
+}
+
+func (cv *CustomValidator) Validate(i interface{}) error {
+	return cv.validator.Struct(i)
+}
 
 var db *gorm.DB
 
@@ -45,6 +54,8 @@ func main() {
 
 	e := echo.New()
 
+	e.Validator = &CustomValidator{validator: validator.New()}
+
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins:     []string{"http://localhost:3000", "https://question-and-answer.gojiyuuniotorikudasai.com", "https://question-and-answer-alpha.vercel.app"},
 		AllowMethods:     []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
@@ -67,6 +78,9 @@ func registerUser(c echo.Context) error {
 	if err := c.Bind(user); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"message": "Invalid request"})
 	}
+	if err := c.Validate(user); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	}
 	if result := db.Create(&user); result.Error != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Failed to create user"})
 	}
@@ -76,43 +90,50 @@ func registerUser(c echo.Context) error {
 
 func getUserByEmail(c echo.Context) error {
 	var request struct {
-		Email string `json:"email"`
+		Email string `json:"email" validate:"required,email"`
 	}
+
 	if err := c.Bind(&request); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
 	}
-	if request.Email == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
+	if err := c.Validate(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	var user models.User
 	result := db.Where("email = ?", request.Email).First(&user)
 	if result.Error != nil {
 		return c.JSON(http.StatusNotFound, echo.Map{"message": "User not found"})
 	}
+
 	return c.JSON(http.StatusOK, user)
 }
 
 func addItem(c echo.Context) error {
 	item := new(models.Item)
+
 	if err := c.Bind(item); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
+	}
+	if err := c.Validate(&item); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	if err := db.Create(&item).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to create item"})
 	}
+
 	return c.JSON(http.StatusOK, item)
 }
 
 func getItemsByEmail(c echo.Context) error {
 	var items []models.Item
 	var request struct {
-		Email string `json:"email"`
+		Email string `json:"email" validate:"required,email"`
 	}
 	if err := c.Bind(&request); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
 	}
-	if request.Email == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
+	if err := c.Validate(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	if err := db.Preload("User").Where("user_email = ?", request.Email).Find(&items).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to fetch items for the specified user"})
@@ -122,16 +143,16 @@ func getItemsByEmail(c echo.Context) error {
 
 func updateItem(c echo.Context) error {
 	var request struct {
-		ID       uint   `json:"id"`
-		Email    string `json:"email"`
-		Question string `json:"question"`
-		Answer   string `json:"answer"`
+		ID       uint   `json:"id" validate:"required"`
+		Email    string `json:"email" validate:"required,email"`
+		Question string `json:"question" validate:"required"`
+		Answer   string `json:"answer" validate:"required"`
 	}
 	if err := c.Bind(&request); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
 	}
-	if request.Email == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
+	if err := c.Validate(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	var item models.Item
 	if err := db.Where("id = ? AND user_email = ?", request.ID, request.Email).First(&item).Error; err != nil {
@@ -147,14 +168,14 @@ func updateItem(c echo.Context) error {
 
 func deleteItemById(c echo.Context) error {
 	var request struct {
-		ID    uint   `json:"id"`
-		Email string `json:"email"`
+		ID    uint   `json:"id" validate:"required"`
+		Email string `json:"email" validate:"required,email"`
 	}
 	if err := c.Bind(&request); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request"})
 	}
-	if request.Email == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Email is required"})
+	if err := c.Validate(&request); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	if err := db.Where("id = ? AND user_email = ?", request.ID, request.Email).Delete(&models.Item{}).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to delete item"})
