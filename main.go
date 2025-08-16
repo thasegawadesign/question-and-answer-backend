@@ -46,7 +46,7 @@ func main() {
 	e := echo.New()
 
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins:     []string{"http://localhost:3000", "https://www.question-and-answer.vegetworks.com", "https://question-and-answer.vegetworks.com", "https://www.question-and-answer.vegetstudios.com", "https://question-and-answer.vegetstudios.com", "https://www.question-and-answer.vegetstudio.com", "https://question-and-answer.vegetstudio.com", "https://question-and-answer.gojiyuuniotorikudasai.com", "https://question-and-answer-alpha.vercel.app"},
+		AllowOrigins:     []string{"http://localhost:3000", "https://www.question-and-answer.vegetworks.com", "https://www.question-and-answer.gojiyuuniotorikudasai.com"},
 		AllowMethods:     []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
 		AllowCredentials: true,
 	}))
